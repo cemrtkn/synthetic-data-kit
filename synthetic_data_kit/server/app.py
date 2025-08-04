@@ -20,8 +20,8 @@ from synthetic_data_kit.core.ingest import process_file as ingest_process_file
 app = Flask(__name__)
 app.config['SECRET_KEY'] = os.urandom(24)
 
-# Set default paths
-DEFAULT_DATA_DIR = Path(__file__).parents[2] / "data"
+# Use environment variable override or fallback to /tmp
+DEFAULT_DATA_DIR = Path(os.environ.get("SYNTHETIC_DATA_DIR", "/tmp/synthetic_data"))
 DEFAULT_OUTPUT_DIR = DEFAULT_DATA_DIR / "output"
 DEFAULT_GENERATED_DIR = DEFAULT_DATA_DIR / "generated"
 
