@@ -524,7 +524,12 @@ class LLMClient:
                 return await asyncio.gather(*tasks)
             
             # Run the async batch processing
-            batch_results = asyncio.run(process_batch())
+            loop = asyncio.get_event_loop()
+            if loop.is_closed():
+                loop = asyncio.new_event_loop()
+                asyncio.set_event_loop(loop)
+
+            batch_results = loop.run_until_complete(process_batch())
             results.extend(batch_results)
             
             # Small delay between batches to avoid rate limits
