@@ -192,6 +192,12 @@ class QAGenerator:
                     remaining_pairs = num_pairs - len(all_qa_pairs)
                     if remaining_pairs > 0:
                         pairs_to_add = chunk_pairs[:remaining_pairs]
+
+                        # Add chunk to q&a pairs
+                        for idx, example in enumerate(pairs_to_add):
+                            example["reference_text"] = chunks[chunk_index]
+                            pairs_to_add[idx] = example
+    
                         all_qa_pairs.extend(pairs_to_add)
                         
                         if verbose:
