@@ -295,8 +295,8 @@ def create(
     chunk_size: Optional[int] = typer.Option(
         None, "--chunk-size", help="Size of text chunks for processing large documents (default: 4000)"
     ),
-    chunk_overlap: Optional[int] = typer.Option(
-        None, "--chunk-overlap", help="Overlap between chunks in characters (default: 200)"
+    chunk_overlap: Optional[float] = typer.Option(
+        None, "--chunk-overlap", help="Overlap between chunks in percentage of context characters (default: 0.1)"
     ),
     verbose: bool = typer.Option(
         False, "--verbose", "-v", help="Show detailed output"

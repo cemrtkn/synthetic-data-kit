@@ -11,9 +11,11 @@ import time
 import os
 from pathlib import Path
 from rich.progress import Progress, BarColumn, TextColumn, TimeElapsedColumn, TimeRemainingColumn
+from chonkie import RecursiveChunker, RecursiveRules, RecursiveLevel, OverlapRefinery
+
 
 from synthetic_data_kit.models.llm_client import LLMClient
-from synthetic_data_kit.utils.text import split_into_chunks
+from synthetic_data_kit.utils.text import split_into_chunks, conditional_overlap
 from synthetic_data_kit.utils.llm_processing import parse_qa_pairs, parse_ratings, convert_to_conversation_format
 from synthetic_data_kit.utils.config import load_config, get_generation_config, get_curate_config, get_prompt
 
@@ -30,7 +32,16 @@ class QAGenerator:
         # Get specific configurations
         self.generation_config = get_generation_config(self.config)
         self.curate_config = get_curate_config(self.config)
-    
+
+        self.chunker_rules = RecursiveRules([
+            RecursiveLevel(delimiters=["\n\n"], include_delim=None),  # Paragraph boundaries
+            RecursiveLevel(delimiters=[". ", "! ", "? "], include_delim="prev"),  # Sentence boundaries
+        ])
+
+        self.overlapper_rules = RecursiveRules([
+            RecursiveLevel(whitespace=True),  # Paragraph boundaries
+        ])
+            
     def generate_summary(self, 
                          document_text: str, 
                          rolling_summary: Optional[bool] = False) -> str:
@@ -91,16 +102,17 @@ class QAGenerator:
         # Get generation config
         chunk_size = self.generation_config.get("chunk_size", 4000)
         temperature = self.generation_config.get("temperature", 0.7)
-        overlap = self.generation_config.get("overlap", 200)
+        overlap = self.generation_config.get("overlap", 0.1)
         batch_size = self.generation_config.get("batch_size", 32)
         
         # Split text into chunks
-        chunks = split_into_chunks(
-            document_text, 
-            chunk_size=chunk_size, 
-            overlap=overlap
-        )
-        
+        self.chunker = RecursiveChunker(chunk_size=chunk_size, min_characters_per_chunk=400, rules=self.chunker_rules)
+        self.overlapper = OverlapRefinery(tokenizer_or_token_counter="character", context_size=overlap, method="suffix", rules=self.overlapper_rules, inplace=True)
+
+        print(f"Chunking document into roughly {chunk_size} characters with {overlap*100}% overlap for chunks falling under the character threshold of chunk_size*overlap")
+        chunks = self.chunker(document_text)
+        chunks = conditional_overlap(chunks, required_length=chunk_size, overlap_size=overlap, overlapper=self.overlapper)
+
         if verbose:
             print(f"Generating QA pairs...")
             print(f"Document split into {len(chunks)} chunks")

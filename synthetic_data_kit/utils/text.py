@@ -64,3 +64,32 @@ def extract_json_from_text(text: str) -> Dict[str, Any]:
             pass
     
     raise ValueError("Could not extract valid JSON from the response")
+
+
+
+def conditional_overlap(chunks, required_length=800, overlap_size=0.1, overlapper=None):
+    """Apply overlap only to chunks under the specified character threshold"""
+    overlapped_chunks = []
+    
+    for i, chunk in enumerate(chunks):
+        if  len(chunk.text)/required_length < (1 - overlap_size):
+            # Create a mini-list with current chunk and adjacent chunks for context
+            chunk_subset = []
+            
+            if i > 0:
+                chunk_subset.append(chunks[i-1])
+            
+            chunk_subset.append(chunk)
+            
+            if i < len(chunks) - 1:
+                chunk_subset.append(chunks[i+1])
+            
+            overlapped_subset = overlapper(chunk_subset)
+            
+            # Extract the overlapped version of our target chunk
+            target_idx = 1 if i > 0 else 0  # Adjust index based on whether we included previous chunk
+            overlapped_chunks.append(overlapped_subset[target_idx])
+        else:
+            overlapped_chunks.append(chunk)
+    
+    return overlapped_chunks
