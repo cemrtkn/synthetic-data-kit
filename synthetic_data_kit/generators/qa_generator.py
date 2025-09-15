@@ -207,7 +207,7 @@ class QAGenerator:
 
                         # Add chunk to q&a pairs
                         for idx, example in enumerate(pairs_to_add):
-                            example["reference_text"] = chunks[chunk_index]
+                            example["reference_text"] = chunks[chunk_index].text
                             pairs_to_add[idx] = example
     
                         all_qa_pairs.extend(pairs_to_add)
