@@ -473,6 +473,9 @@ def curate(
     preview: bool = typer.Option(
         False, "--preview", help="Preview files to be processed without actually processing them"
     ),
+    cot_rating: bool = typer.Option(
+        False, "--cot-rating", help="Rate the examples with CoT without regeneration of the question and answer"
+    ),
 ):
     """
     Clean and filter content based on quality.
@@ -566,7 +569,8 @@ def curate(
                 model=model,
                 config_path=ctx.config_path,
                 verbose=verbose,
-                provider=provider
+                provider=provider,
+                cot_rating=cot_rating
             )
             
             # Return appropriate exit code
@@ -597,7 +601,8 @@ def curate(
                     model,
                     ctx.config_path,
                     verbose,
-                    provider=provider
+                    provider=provider,
+                    cot_rating=cot_rating
                 )
             console.print(f"✅ Cleaned content saved to [bold]{result_path}[/bold]", style="green")
             return 0

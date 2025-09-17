@@ -64,7 +64,7 @@ def parse_qa_pairs(text: str) -> List[Dict[str, str]]:
     
     return pairs
 
-def parse_ratings(text: str, original_items: List[Dict[str, str]] = None) -> List[Dict[str, Any]]:
+def parse_ratings(text: str, original_items: List[Dict[str, str]] = None, cot_rating: bool = False) -> List[Dict[str, Any]]:
     """Parse rated items from LLM output
     
     Attempts to parse JSON from LLM response. Will raise an exception if
@@ -82,7 +82,12 @@ def parse_ratings(text: str, original_items: List[Dict[str, str]] = None) -> Lis
         ValueError: If the response cannot be parsed as valid JSON
     """
     verbose = os.environ.get('SDK_VERBOSE', 'false').lower() == 'true'
-    
+
+    if cot_rating:
+        pattern_key = "cot_rating"
+    else:
+        pattern_key = "rating"
+        
     if verbose:
         print(f"Parsing ratings response of length {len(text)}")
         print(f"Raw response: {repr(text[:500])}")
@@ -112,9 +117,13 @@ def parse_ratings(text: str, original_items: List[Dict[str, str]] = None) -> Lis
             try:
                 parsed = json.loads(json_text)
                 if isinstance(parsed, dict) and "rating" in parsed:
+                    # Put individual item in a list
+                    parsed = [parsed]
                     if verbose:
                         print("Successfully parsed single JSON object")
-                    return [parsed]
+                    if cot_rating:
+                        parsed = match_cot_to_qa_pair(parsed, original_items)
+                    return parsed
             except json.JSONDecodeError as e:
                 if verbose:
                     print(f"JSON parse error for object: {str(e)}")
@@ -138,6 +147,8 @@ def parse_ratings(text: str, original_items: List[Dict[str, str]] = None) -> Lis
                             return []
                     if verbose:
                         print(f"Successfully parsed {len(parsed)} items in JSON array")
+                    if cot_rating:
+                        parsed = match_cot_to_qa_pair(parsed, original_items)
                     return parsed
             except json.JSONDecodeError as e:
                 if verbose:
@@ -158,9 +169,13 @@ def parse_ratings(text: str, original_items: List[Dict[str, str]] = None) -> Lis
                     clean_block = re.sub(r'\s*\n\s*', ' ', block.strip())
                     parsed = json.loads(clean_block)
                     if isinstance(parsed, dict) and "rating" in parsed:
+                        # Put individual item in a list
+                        parsed = [parsed]
                         if verbose:
                             print("Successfully parsed from code block (single object)")
-                        return [parsed]
+                        if cot_rating:
+                            parsed = match_cot_to_qa_pair(parsed, original_items)
+                        return parsed
                     elif isinstance(parsed, list):
                         valid_items = True
                         for item in parsed:
@@ -170,6 +185,8 @@ def parse_ratings(text: str, original_items: List[Dict[str, str]] = None) -> Lis
                         if valid_items and len(parsed) > 0:
                             if verbose:
                                 print(f"Successfully parsed {len(parsed)} items from code block")
+                            if cot_rating:
+                                parsed = match_cot_to_qa_pair(parsed, original_items)
                             return parsed
                 except json.JSONDecodeError:
                     pass
@@ -180,12 +197,17 @@ def parse_ratings(text: str, original_items: List[Dict[str, str]] = None) -> Lis
     # Method 2: Regex
     try:
         # Look for JSON patterns in the text
-        json_patterns = [
-            # Single object pattern
-            r'(\{\s*"question"\s*:\s*"[^"]*"\s*,\s*"answer"\s*:\s*"[^"]*"\s*,\s*"rating"\s*:\s*\d+(?:\.\d+)?\s*\})',
-            # Array pattern
-            r'(\[\s*\{\s*"question"\s*:.*"rating"\s*:\s*\d+(?:\.\d+)?\s*\}\s*\])'
-        ]
+        pattern_variations = {
+            "rating": [
+                r'(\{\s*"question"\s*:\s*"[^"]*"\s*,\s*"answer"\s*:\s*"[^"]*"\s*,\s*"rating"\s*:\s*\d+(?:\.\d+)?\s*\})',
+                r'(\[\s*\{\s*"question"\s*:.*"rating"\s*:\s*\d+(?:\.\d+)?\s*\}\s*\])'
+            ],
+            "cot_rating": [
+                r'(\{\s*"chain_of_thought"\s*:\s*"[^"]*"\s*,\s*"rating"\s*:\s*\d+(?:\.\d+)?\s*\})',
+                r'(\[\s*\{\s*"chain_of_thought"\s*:.*"rating"\s*:\s*\d+(?:\.\d+)?\s*\}\s*\])'
+                ]
+        }
+        json_patterns = pattern_variations[pattern_key]
         
         for pattern in json_patterns:
             matches = re.findall(pattern, text, re.DOTALL)
@@ -196,12 +218,18 @@ def parse_ratings(text: str, original_items: List[Dict[str, str]] = None) -> Lis
                         clean_match = re.sub(r'\s*\n\s*', ' ', match)
                         parsed = json.loads(clean_match)
                         if isinstance(parsed, dict) and "rating" in parsed:
+                            # Put individual item in a list
+                            parsed = [parsed]
                             if verbose:
                                 print("Successfully parsed using regex (single object)")
-                            return [parsed]
+                            if cot_rating:
+                                parsed = match_cot_to_qa_pair(parsed, original_items)
+                            return parsed
                         elif isinstance(parsed, list) and all("rating" in item for item in parsed):
                             if verbose:
                                 print(f"Successfully parsed {len(parsed)} items using regex")
+                            if cot_rating:
+                                parsed = match_cot_to_qa_pair(parsed, original_items)
                             return parsed
                     except json.JSONDecodeError:
                         pass
@@ -215,12 +243,18 @@ def parse_ratings(text: str, original_items: List[Dict[str, str]] = None) -> Lis
         try:
             parsed = json5.loads(text)
             if isinstance(parsed, dict) and "rating" in parsed:
+                # Put individual item in a list
+                parsed = [parsed]
                 if verbose:
                     print("Successfully parsed using json5 (single object)")
-                return [parsed]
+                if cot_rating:
+                    parsed = match_cot_to_qa_pair(parsed, original_items)
+                return parsed
             elif isinstance(parsed, list) and all("rating" in item for item in parsed):
                 if verbose:
                     print(f"Successfully parsed {len(parsed)} items using json5")
+                if cot_rating:
+                    parsed = match_cot_to_qa_pair(parsed, original_items)
                 return parsed
         except:
             pass
@@ -231,7 +265,7 @@ def parse_ratings(text: str, original_items: List[Dict[str, str]] = None) -> Lis
     # If we reach here, try one last aggressive approach
     try:
         # Try line-by-line parsing for each item
-        if original_items and len(original_items) > 0:
+        if original_items and len(original_items) > 0 and not cot_rating:
             # Look for patterns that include both the question and rating
             found_items = []
             for item in original_items:
@@ -284,3 +318,18 @@ def convert_to_conversation_format(qa_pairs: List[Dict[str, str]],
         conversations.append(conversation)
     
     return conversations
+
+
+def match_cot_to_qa_pair(parsed: List[Dict[str, str]], original_items: List[Dict[str, str]]) -> List[Dict[str, str]]:
+    if len(parsed) != len(original_items):
+        raise ValueError(f"Number of items in parsed and original items do not match: {len(parsed)} != {len(original_items)}")
+    for idx, item in enumerate(parsed):
+        original_question = original_items[idx].get("question")
+        original_answer = original_items[idx].get("answer")
+        parsed[idx] = {
+            "question": original_question,
+            "answer": original_answer,
+            "chain_of_thought": item.get("chain_of_thought", None),
+            "rating": item.get("rating"),
+        }
+    return parsed

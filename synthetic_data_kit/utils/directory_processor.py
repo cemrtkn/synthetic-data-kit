@@ -363,6 +363,7 @@ def process_directory_curate(
     config_path: Optional[str] = None,
     verbose: bool = False,
     provider: Optional[str] = None,
+    cot_rating: bool = False,
 ) -> Dict[str, Any]:
     """Process all supported files in directory for content curation
     
@@ -442,7 +443,8 @@ def process_directory_curate(
                     model,
                     config_path,
                     verbose,
-                    provider=provider
+                    provider=provider,
+                    cot_rating=cot_rating
                 )
                 
                 # Record success

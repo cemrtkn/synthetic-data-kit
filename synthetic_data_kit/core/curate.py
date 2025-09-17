@@ -24,6 +24,7 @@ def curate_qa_pairs(
     config_path: Optional[Path] = None,
     verbose: bool = False,
     provider: Optional[str] = None,
+    cot_rating: bool = False,
 ) -> str:
     """Clean and filter QA pairs based on quality ratings
     
@@ -92,6 +93,10 @@ def curate_qa_pairs(
     
     # Get rating prompt template
     rating_prompt_template = get_prompt(client.config, "qa_rating")
+
+    # Get cot rating flag
+    cot_rating = curate_config.get("cot_rating", cot_rating)
+    print(f"Cot rating flag: {cot_rating}")
     
     # Split QA pairs into batches
     batches = []
@@ -178,7 +183,7 @@ def curate_qa_pairs(
                         if verbose:
                             print(f"Processing batch {original_batch_index+1}")
                             
-                        rated_batch = parse_ratings(response, original_batch)
+                        rated_batch = parse_ratings(response, original_batch, cot_rating=cot_rating)
                         
                         # Process the rated batch
                         for pair in rated_batch:
@@ -209,7 +214,7 @@ def curate_qa_pairs(
                                 )
                                 try:
                                     # This should be a single item
-                                    rated_item = parse_ratings(item_response, [item])
+                                    rated_item = parse_ratings(item_response, [item], cot_rating=cot_rating)
                                     if rated_item and len(rated_item) > 0:
                                         pair = rated_item[0]
                                         if "rating" in pair:
