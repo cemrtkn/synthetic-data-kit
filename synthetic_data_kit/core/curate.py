@@ -51,7 +51,14 @@ def curate_qa_pairs(
         data = json.load(f)
     
     # Extract QA pairs
-    qa_pairs = data.get("qa_pairs", [])
+    full_data = data.get("qa_pairs", [])
+    qa_pairs = []
+    for pair in full_data:
+        if pair.get("question", "").lower() == "none" or pair.get("answer", "").lower() == "none":
+            continue
+        else:
+            qa_pairs.append(pair)
+    print(f"Filtered {len(full_data) - len(qa_pairs)} 'none' QA pairs")
     summary = data.get("summary", "")
     
     # If there are no QA pairs or they're already filtered
