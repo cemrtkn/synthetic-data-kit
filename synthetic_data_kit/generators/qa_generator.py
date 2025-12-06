@@ -137,11 +137,18 @@ class QAGenerator:
         all_messages = []
         for i, chunk in enumerate(chunks):
             # Format the prompt with summary and text
-            qa_prompt = qa_prompt_template.format(
-                num_pairs=pairs_per_chunk,
-                summary=summary[:100],
-                text=chunk
-            )
+            # if summary placeholder is not in the prompt this will not add the summary to the prompt
+            if summary:
+                qa_prompt = qa_prompt_template.format(
+                    num_pairs=pairs_per_chunk,
+                        summary=summary[:100],
+                        text=chunk
+                    )
+            else:
+                qa_prompt = qa_prompt_template.format(
+                    num_pairs=pairs_per_chunk,
+                    text=chunk
+                )
             
             messages = [
                 {"role": "system", "content": qa_prompt}
@@ -349,6 +356,7 @@ class QAGenerator:
                         documents: List[Dict[str, Any]],
                         num_pairs: int = 25,
                         verbose: bool = False,
+                        summary_generation: bool = False,
                         rolling_summary: Optional[bool] = False) -> Dict[str, Any]:
         """Process a list of documents to generate QA pairs without rating"""
         # Set the verbose environment variable
@@ -361,7 +369,10 @@ class QAGenerator:
         full_text = " ".join([doc["text"] for doc in documents])
 
         # Generate summary
-        summary = self.generate_summary(full_text, rolling_summary=rolling_summary)
+        if summary_generation:
+            summary = self.generate_summary(full_text, rolling_summary=rolling_summary)
+        else:
+            summary = None
 
         # Generate QA pairs
         qa_pairs = self.generate_qa_pairs(full_text, summary, num_pairs=num_pairs)

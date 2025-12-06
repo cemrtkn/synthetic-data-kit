@@ -54,6 +54,7 @@ generation:
   max_context_length: 8000       # Context Length of the MODEL. Useful while Generating Summary
   summary_overlap: 0       # Overlap between chunks to maintain context. Useful while Generating Summary
   subsample: 1.0       # Subsample the chunks to generate from (default: 1.0)
+  summary_generation: false # Whether to generate a summary (default: false)
   
 # Content curation parameters
 curate:
