@@ -9,6 +9,10 @@ from typing import Dict, List, Any, Optional, Tuple
 import json
 import time
 import os
+import random
+import math
+random.seed(42)
+
 from pathlib import Path
 from rich.progress import Progress, BarColumn, TextColumn, TimeElapsedColumn, TimeRemainingColumn
 from chonkie import RecursiveChunker, RecursiveRules, RecursiveLevel, OverlapRefinery
@@ -104,6 +108,7 @@ class QAGenerator:
         temperature = self.generation_config.get("temperature", 0.7)
         overlap = self.generation_config.get("overlap", 0.1)
         batch_size = self.generation_config.get("batch_size", 32)
+        subsample = self.generation_config.get("subsample", 1.0)
         
         # Split text into chunks
         self.chunker = RecursiveChunker(chunk_size=chunk_size, min_characters_per_chunk=400, rules=self.chunker_rules)
@@ -111,6 +116,10 @@ class QAGenerator:
 
         print(f"Chunking document into roughly {chunk_size} characters with {overlap*100}% overlap for chunks falling under the character threshold of chunk_size*overlap")
         chunks = self.chunker(document_text)
+        if subsample < 1.0:
+            original_len_chunks = len(chunks)
+            chunks = random.sample(chunks, math.ceil(len(chunks) * subsample))
+            print(f"Subsampled {len(chunks)} chunks from {original_len_chunks} chunks")
         chunks = conditional_overlap(chunks, required_length=chunk_size, overlap_size=overlap, overlapper=self.overlapper)
 
         if verbose:

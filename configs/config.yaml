@@ -53,6 +53,7 @@ generation:
   batch_size: 32     # Number of requests to batch together (for create)
   max_context_length: 8000       # Context Length of the MODEL. Useful while Generating Summary
   summary_overlap: 0       # Overlap between chunks to maintain context. Useful while Generating Summary
+  subsample: 1.0       # Subsample the chunks to generate from (default: 1.0)
   
 # Content curation parameters
 curate:
@@ -60,6 +61,7 @@ curate:
   batch_size: 5      # Number of items per batch for rating (smaller batches for API stability)
   inference_batch: 5 # Number of batches to process at once with VLLM
   temperature: 0.1   # Temperature for rating (lower = more consistent)
+  cot_rating: false   # Whether to rate the CoT examples (default: false)
 
 # Format conversion parameters
 format:
